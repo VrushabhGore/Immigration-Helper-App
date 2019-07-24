@@ -1,8 +1,10 @@
 const Post = require('../model/post');
 const formidable = require('formidable');
 const fs = require('fs');
+const _ = require('lodash');
 
 
+// This gets all Posts
 exports.getPosts = (req, res) => {
   const posts = Post.find()
   .populate('author','_id name')
@@ -13,6 +15,7 @@ exports.getPosts = (req, res) => {
   .catch(err => console.log('Error here: ',err));
 };
 
+//This Method is used to create Post
 exports.createPost = (req,res,next) =>{
     let form = new formidable.IncomingForm();
     form.keepExtensions = true;
@@ -42,7 +45,7 @@ exports.createPost = (req,res,next) =>{
 
 };
 
-
+// Gets Post By a User
 exports.postByUser = (req,res) => {
   Post.find({author: req.profile._id})
   .populate('author','_id name')
@@ -70,4 +73,40 @@ exports.postById = (req,res,next,id) => {
     req.post = post
     next()
   });
+}
+
+exports.isPoster = (req,res,next) =>{
+  const isPoster = req.post && req.auth && req.post.author._id === req.auth._id
+  if (!isPoster) {
+    return res.status(403).json({
+      error:'User is not authorized!'
+    });
+    }
+    next();
+
+}
+
+exports.updatePost = (req,res,next) => {
+  let post = req.post
+  post = _.extend(post,req.body)
+  post.updated = Date.now();
+  post.save(err => {
+    if (err) {
+      return res.status(400).json({
+        error:err
+      })
+    }
+    return res.json(post)
+  });
+}
+
+
+exports.deletePost = (req,res) => {
+  const post = req.post;
+  post.remove((err,success)=>{
+    if (err) {
+      return res.status(400).json({error:error})
+    }
+    return res.json({message:'Post successfully deleted'})
+  })
 }
